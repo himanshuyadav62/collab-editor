@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "paths": {
+      "@collab-editor/collab": ["../../packages/collab/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

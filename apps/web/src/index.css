@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Editor styles */
+.ProseMirror {
+  @apply outline-none min-h-[300px] p-4;
+}
+
+.ProseMirror p {
+  @apply my-2;
+}
+
+.ProseMirror h1 {
+  @apply text-3xl font-bold my-4;
+}
+
+.ProseMirror h2 {
+  @apply text-2xl font-bold my-3;
+}
+
+.ProseMirror h3 {
+  @apply text-xl font-bold my-2;
+}
+
+.ProseMirror ul {
+  @apply list-disc ml-6 my-2;
+}
+
+.ProseMirror ol {
+  @apply list-decimal ml-6 my-2;
+}
+
+.ProseMirror code {
+  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-gray-400 float-left h-0 pointer-events-none;
+  content: attr(data-placeholder);
+}
+
+/* Collaboration cursor styles */
+.collaboration-cursor__caret {
+  @apply relative ml-[-1px] mr-[-1px] pointer-events-none;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+}
+
+.collaboration-cursor__label {
+  @apply absolute text-xs text-white whitespace-nowrap font-medium px-1 py-0.5 rounded;
+  top: -1.4em;
+  left: -1px;
+}

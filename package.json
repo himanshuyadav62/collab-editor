@@ -1,0 +1,17 @@
+{
+  "name": "collab-editor",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "nx run-many --target=dev --all",
+    "dev:web": "nx run @collab-editor/web:dev",
+    "dev:server": "nx run @collab-editor/collab-server:dev",
+    "build": "nx run-many --target=build --all",
+    "lint": "nx run-many --target=lint --all"
+  },
+  "devDependencies": {
+    "nx": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
