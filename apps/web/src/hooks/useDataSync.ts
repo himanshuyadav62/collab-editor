@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { apiClient } from '@/lib/apiClient';
 import { Note, Todo, TodoGroup, Workflow } from '@/lib/types';
@@ -10,9 +10,12 @@ export function useNotes() {
   const { user } = useAuth();
   const [notes, setNotesState] = useState<Note[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const isLoadingRef = useRef(false);
   const dataMode: DataMode = user ? 'remote' : 'local';
 
   const loadLocalNotes = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const stored = localStorage.getItem('notes');
       setNotesState(stored ? JSON.parse(stored) : []);
@@ -20,10 +23,12 @@ export function useNotes() {
       setNotesState([]);
     }
     setHasLoaded(true);
+    isLoadingRef.current = false;
   }, []);
 
   const loadRemoteNotes = useCallback(async () => {
-    if (!user) return;
+    if (!user || isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const data = await apiClient.getNotes(user.id);
       setNotesState(
@@ -41,14 +46,15 @@ export function useNotes() {
       toast.error('Failed to load notes');
     } finally {
       setHasLoaded(true);
+      isLoadingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hasLoaded) return;
     if (dataMode === 'local') loadLocalNotes();
     else loadRemoteNotes();
-  }, [user?.id, hasLoaded, dataMode, loadLocalNotes, loadRemoteNotes]);
+  }, [dataMode, hasLoaded, loadLocalNotes, loadRemoteNotes]);
 
   const setNotes = useCallback(async (notesOrUpdater: Note[] | ((prev: Note[]) => Note[])) => {
     const nextNotes = typeof notesOrUpdater === 'function' ? notesOrUpdater(notes) : notesOrUpdater;
@@ -85,9 +91,12 @@ export function useTodos() {
   const { user } = useAuth();
   const [todos, setTodosState] = useState<Todo[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const isLoadingRef = useRef(false);
   const dataMode: DataMode = user ? 'remote' : 'local';
 
   const loadLocalTodos = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const stored = localStorage.getItem('todos');
       setTodosState(stored ? JSON.parse(stored) : []);
@@ -95,10 +104,12 @@ export function useTodos() {
       setTodosState([]);
     }
     setHasLoaded(true);
+    isLoadingRef.current = false;
   }, []);
 
   const loadRemoteTodos = useCallback(async () => {
-    if (!user) return;
+    if (!user || isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const data = await apiClient.getTodos(user.id);
       setTodosState(
@@ -115,14 +126,15 @@ export function useTodos() {
       toast.error('Failed to load todos');
     } finally {
       setHasLoaded(true);
+      isLoadingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hasLoaded) return;
     if (dataMode === 'local') loadLocalTodos();
     else loadRemoteTodos();
-  }, [user?.id, hasLoaded, dataMode, loadLocalTodos, loadRemoteTodos]);
+  }, [dataMode, hasLoaded, loadLocalTodos, loadRemoteTodos]);
 
   const setTodos = useCallback(async (todosOrUpdater: Todo[] | ((prev: Todo[]) => Todo[])) => {
     const nextTodos = typeof todosOrUpdater === 'function' ? todosOrUpdater(todos) : todosOrUpdater;
@@ -161,9 +173,12 @@ export function useTodoGroups() {
   const { user } = useAuth();
   const [groups, setGroupsState] = useState<TodoGroup[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const isLoadingRef = useRef(false);
   const dataMode: DataMode = user ? 'remote' : 'local';
 
   const loadLocal = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const stored = localStorage.getItem('todo-groups');
       setGroupsState(stored ? JSON.parse(stored) : []);
@@ -171,10 +186,12 @@ export function useTodoGroups() {
       setGroupsState([]);
     }
     setHasLoaded(true);
+    isLoadingRef.current = false;
   }, []);
 
   const loadRemote = useCallback(async () => {
-    if (!user) return;
+    if (!user || isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const data = await apiClient.getTodoGroups(user.id);
       setGroupsState(
@@ -188,14 +205,15 @@ export function useTodoGroups() {
       toast.error('Failed to load groups');
     } finally {
       setHasLoaded(true);
+      isLoadingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hasLoaded) return;
     if (dataMode === 'local') loadLocal();
     else loadRemote();
-  }, [user?.id, hasLoaded, dataMode, loadLocal, loadRemote]);
+  }, [dataMode, hasLoaded, loadLocal, loadRemote]);
 
   const setGroups = useCallback(async (groupsOrUpdater: TodoGroup[] | ((prev: TodoGroup[]) => TodoGroup[])) => {
     const nextGroups = typeof groupsOrUpdater === 'function' ? groupsOrUpdater(groups) : groupsOrUpdater;
@@ -223,9 +241,12 @@ export function useWorkflows() {
   const { user } = useAuth();
   const [workflows, setWorkflowsState] = useState<Workflow[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const isLoadingRef = useRef(false);
   const dataMode: DataMode = user ? 'remote' : 'local';
 
   const loadLocal = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const stored = localStorage.getItem('workflows-list');
       const summaries = stored ? JSON.parse(stored) : [];
@@ -239,10 +260,12 @@ export function useWorkflows() {
       setWorkflowsState([]);
     }
     setHasLoaded(true);
+    isLoadingRef.current = false;
   }, []);
 
   const loadRemote = useCallback(async () => {
-    if (!user) return;
+    if (!user || isLoadingRef.current) return;
+    isLoadingRef.current = true;
     try {
       const data = await apiClient.getWorkflows(user.id);
       setWorkflowsState(
@@ -258,14 +281,15 @@ export function useWorkflows() {
       toast.error('Failed to load workflows');
     } finally {
       setHasLoaded(true);
+      isLoadingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hasLoaded) return;
     if (dataMode === 'local') loadLocal();
     else loadRemote();
-  }, [user?.id, hasLoaded, dataMode, loadLocal, loadRemote]);
+  }, [dataMode, hasLoaded, loadLocal, loadRemote]);
 
   const setWorkflows = useCallback(async (wfOrUpdater: Workflow[] | ((prev: Workflow[]) => Workflow[])) => {
     const next = typeof wfOrUpdater === 'function' ? wfOrUpdater(workflows) : wfOrUpdater;

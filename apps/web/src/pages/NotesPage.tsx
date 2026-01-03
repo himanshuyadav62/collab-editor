@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNotes } from '@/hooks/useDataSync';
 
 export function NotesPage() {
-  const { notes: allNotes, setNotes: setAllNotes, refetch: refetchNotes } = useNotes();
+  const { notes: allNotes, setNotes: setAllNotes } = useNotes();
   const navigate = useNavigate();
   const { noteId } = useParams<{ noteId?: string }>();
   
@@ -34,7 +34,6 @@ export function NotesPage() {
   const titleDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { if (noteId) setSelectedNoteId(noteId); }, [noteId]);
-  useEffect(() => { refetchNotes(); }, []);
 
   const updateNote = useCallback((noteId: string, updates: Partial<Note>) => {
     setAllNotes(current => (current || []).map(note => note.id === noteId ? { ...note, ...updates, updatedAt: Date.now() } : note));
