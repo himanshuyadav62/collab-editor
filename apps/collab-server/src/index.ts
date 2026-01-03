@@ -5,28 +5,27 @@ import { config } from './config/env.js';
 const server = Server.configure({
   port: config.port,
   
-  // Disable authentication requirement for development
-  // async onAuthenticate(data) {
-  //   return authenticate(data);
-  // },
-
+  // Debounce document storage
+  debounce: 2000,
+  maxDebounce: 10000,
+  
   async onLoadDocument(data) {
-    // Load document from database
+    console.log(`[LOAD] Loading document: ${data.documentName}`);
     const doc = await loadDocument(data.documentName);
     return doc;
   },
 
   async onStoreDocument(data) {
-    // Save document to database
+    console.log(`[STORE] Storing document: ${data.documentName}`);
     await saveDocument(data.documentName, data.document);
   },
 
   async onConnect(data) {
-    console.log(`Client connected to document: ${data.documentName}`);
+    console.log(`[CONNECT] Client connected to document: ${data.documentName}`);
   },
 
   async onDisconnect(data) {
-    console.log(`Client disconnected from document: ${data.documentName}`);
+    console.log(`[DISCONNECT] Client disconnected from document: ${data.documentName}`);
   },
 });
 

@@ -48,8 +48,12 @@ function DocumentPage() {
 
       <main className="flex-1 w-full overflow-hidden">
         <div className="h-full bg-card border-x border-border">
-          {doc && provider && (
+          {doc && provider ? (
             <Editor doc={doc} provider={provider} />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Loading editor...</div>
+            </div>
           )}
         </div>
       </main>

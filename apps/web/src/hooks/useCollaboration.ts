@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createYDoc, generateUserColor } from '@collab-editor/collab';
 import * as Y from 'yjs';
@@ -11,8 +11,8 @@ interface User {
 }
 
 interface UseCollaborationReturn {
-  doc: Y.Doc;
-  provider: HocuspocusProvider;
+  doc: Y.Doc | null;
+  provider: HocuspocusProvider | null;
   isConnected: boolean;
   users: User[];
 }
@@ -32,57 +32,47 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
   const { user: authUser } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  
-  // Use refs to maintain stable references
-  const docRef = useRef<Y.Doc | null>(null);
-  const providerRef = useRef<HocuspocusProvider | null>(null);
+  const [doc, setDoc] = useState<Y.Doc | null>(null);
+  const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   
   // Get user info from Supabase auth or fallback to anonymous
-  const user = {
+  const user = useMemo(() => ({
     name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || `Guest-${Math.random().toString(36).substring(2, 6)}`,
     color: authUser?.id ? getUserColor(authUser.id) : generateUserColor(),
-  };
-  const userRef = useRef(user);
-  
-  // Update userRef when auth user changes
-  useEffect(() => {
-    userRef.current = user;
-    if (providerRef.current) {
-      providerRef.current.setAwarenessField('user', user);
-    }
-  }, [authUser?.id, user.name, user.color]);
+  }), [authUser?.id, authUser?.user_metadata?.full_name, authUser?.email]);
 
-  // Initialize doc and provider only once per docId
-  if (!docRef.current || docRef.current.meta?.docId !== docId) {
-    // Cleanup old provider if exists
-    if (providerRef.current) {
-      providerRef.current.destroy();
-    }
+  // Initialize doc and provider
+  useEffect(() => {
+    console.log('Creating new Y.Doc and provider for:', docId);
     
-    docRef.current = createYDoc(docId);
-    providerRef.current = new HocuspocusProvider({
+    const newDoc = createYDoc(docId);
+    const newProvider = new HocuspocusProvider({
       url: COLLAB_SERVER_URL,
       name: docId,
-      document: docRef.current,
-      // Reconnection settings
+      document: newDoc,
       connect: true,
       preserveConnection: true,
       broadcast: true,
     });
-  }
 
-  const doc = docRef.current;
-  const provider = providerRef.current!;
-  const currentUser = userRef.current;
+    setDoc(newDoc);
+    setProvider(newProvider);
 
+    return () => {
+      console.log('Destroying provider for:', docId);
+      newProvider.destroy();
+    };
+  }, [docId]);
+
+  // Handle provider events
   useEffect(() => {
-    // Handle connection status
+    if (!provider) return;
+
     const onStatus = ({ status }: { status: string }) => {
       console.log('Hocuspocus status:', status);
       setIsConnected(status === 'connected');
     };
 
-    // Handle sync status
     const onSynced = ({ state }: { state: boolean }) => {
       console.log('Hocuspocus synced:', state);
     };
@@ -90,13 +80,12 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
     provider.on('status', onStatus);
     provider.on('synced', onSynced);
     
-    // Check if already connected
     if (provider.isConnected) {
       setIsConnected(true);
     }
 
     // Set local user awareness
-    provider.setAwarenessField('user', currentUser);
+    provider.setAwarenessField('user', user);
 
     // Listen for awareness changes
     const handleAwarenessChange = () => {
@@ -119,7 +108,7 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
     provider.awareness?.on('change', handleAwarenessChange);
     handleAwarenessChange();
 
-    // Handle visibility change - reconnect when tab becomes visible
+    // Handle visibility change
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !provider.isConnected) {
         console.log('Tab visible, reconnecting...');
@@ -133,20 +122,8 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
       provider.off('synced', onSynced);
       provider.awareness?.off('change', handleAwarenessChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Don't destroy provider on cleanup - keep connection alive
     };
-  }, [provider, currentUser]);
-
-  // Cleanup on unmount only
-  useEffect(() => {
-    return () => {
-      if (providerRef.current) {
-        providerRef.current.destroy();
-        providerRef.current = null;
-      }
-      docRef.current = null;
-    };
-  }, []);
+  }, [provider, user]);
 
   return { doc, provider, isConnected, users };
 }
