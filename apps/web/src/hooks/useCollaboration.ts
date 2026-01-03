@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createYDoc, generateUserColor } from '@collab-editor/collab';
 import * as Y from 'yjs';
+import { useAuth } from '@/providers/AuthProvider';
 
 interface User {
   id: string;
@@ -18,28 +19,38 @@ interface UseCollaborationReturn {
 
 const COLLAB_SERVER_URL = import.meta.env.VITE_COLLAB_SERVER_URL || 'ws://localhost:1234';
 
-// Generate stable user identity per session
-const getSessionUser = () => {
-  const stored = sessionStorage.getItem('collab-user');
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  const user = {
-    name: `User-${Math.random().toString(36).substring(2, 6)}`,
-    color: generateUserColor(),
-  };
-  sessionStorage.setItem('collab-user', JSON.stringify(user));
-  return user;
+// Generate stable user color per user ID
+const getUserColor = (userId: string) => {
+  const stored = sessionStorage.getItem(`collab-color-${userId}`);
+  if (stored) return stored;
+  const color = generateUserColor();
+  sessionStorage.setItem(`collab-color-${userId}`, color);
+  return color;
 };
 
 export function useCollaboration(docId: string): UseCollaborationReturn {
+  const { user: authUser } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   
   // Use refs to maintain stable references
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<HocuspocusProvider | null>(null);
-  const userRef = useRef(getSessionUser());
+  
+  // Get user info from Supabase auth or fallback to anonymous
+  const user = {
+    name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || `Guest-${Math.random().toString(36).substring(2, 6)}`,
+    color: authUser?.id ? getUserColor(authUser.id) : generateUserColor(),
+  };
+  const userRef = useRef(user);
+  
+  // Update userRef when auth user changes
+  useEffect(() => {
+    userRef.current = user;
+    if (providerRef.current) {
+      providerRef.current.setAwarenessField('user', user);
+    }
+  }, [authUser?.id, user.name, user.color]);
 
   // Initialize doc and provider only once per docId
   if (!docRef.current || docRef.current.meta?.docId !== docId) {
@@ -62,7 +73,7 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
 
   const doc = docRef.current;
   const provider = providerRef.current!;
-  const user = userRef.current;
+  const currentUser = userRef.current;
 
   useEffect(() => {
     // Handle connection status
@@ -85,7 +96,7 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
     }
 
     // Set local user awareness
-    provider.setAwarenessField('user', user);
+    provider.setAwarenessField('user', currentUser);
 
     // Listen for awareness changes
     const handleAwarenessChange = () => {
@@ -124,7 +135,7 @@ export function useCollaboration(docId: string): UseCollaborationReturn {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       // Don't destroy provider on cleanup - keep connection alive
     };
-  }, [provider, user]);
+  }, [provider, currentUser]);
 
   // Cleanup on unmount only
   useEffect(() => {

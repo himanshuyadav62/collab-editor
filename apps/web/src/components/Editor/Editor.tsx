@@ -14,14 +14,14 @@ export function Editor({ doc, provider }: EditorProps) {
 
   if (!editor) {
     return (
-      <div className="p-4 text-gray-500">Loading editor...</div>
+      <div className="p-4 text-muted-foreground">Loading editor...</div>
     );
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       <EditorToolbar editor={editor} />
-      <EditorContent editor={editor} className="min-h-[400px]" />
+      <EditorContent editor={editor} className="flex-1 overflow-auto p-4" />
     </div>
   );
 }

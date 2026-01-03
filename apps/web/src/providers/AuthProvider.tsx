@@ -1,0 +1,125 @@
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import type { Session, User } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabaseClient';
+
+type AuthContextValue = {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  actionLoading: boolean;
+  isSkipped: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  skipLogin: () => void;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [isSkipped, setIsSkipped] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_skipped') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (!supabase) {
+      setInitializing(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!isMounted) return;
+      if (error) {
+        toast.error('Unable to fetch session.');
+      }
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setInitializing(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setInitializing(false);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signInWithGoogle = async () => {
+    if (!supabase) {
+      toast.error('Supabase not configured');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        toast.error(error.message || 'Unable to start Google sign-in.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to start Google sign-in.';
+      toast.error(message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (!supabase) return;
+    setActionLoading(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message || 'Unable to sign out.');
+    }
+    setIsSkipped(false);
+    localStorage.removeItem('auth_skipped');
+    setActionLoading(false);
+  };
+
+  const skipLogin = () => {
+    setIsSkipped(true);
+    localStorage.setItem('auth_skipped', 'true');
+  };
+
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      loading: initializing,
+      actionLoading,
+      isSkipped,
+      signInWithGoogle,
+      signOut,
+      skipLogin,
+    }),
+    [user, session, initializing, actionLoading, isSkipped]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

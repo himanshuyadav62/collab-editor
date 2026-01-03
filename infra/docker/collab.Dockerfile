@@ -9,7 +9,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY . .
 
 # Install dependencies (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build packages in dependency order
 RUN pnpm --filter @collab-editor/collab build && \
@@ -29,7 +29,7 @@ COPY --from=builder /app/packages/collab/dist ./packages/collab/dist
 COPY --from=builder /app/pnpm-lock.yaml ./
 
 # Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --no-frozen-lockfile --prod
 
 EXPOSE 1234
 CMD ["node", "apps/collab-server/dist/index.js"]

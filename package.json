@@ -7,8 +7,10 @@
     "dev": "nx run-many --target=dev --all",
     "dev:web": "nx run @collab-editor/web:dev",
     "dev:server": "nx run @collab-editor/collab-server:dev",
+    "dev:api": "nx run @collab-editor/api-server:dev",
     "build": "nx run-many --target=build --all",
-    "lint": "nx run-many --target=lint --all"
+    "lint": "nx run-many --target=lint --all",
+    "db:migrate": "nx run @collab-editor/api-server:db:migrate"
   },
   "devDependencies": {
     "nx": "^20.0.0",
