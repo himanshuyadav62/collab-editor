@@ -8,7 +8,7 @@ const router: RouterType = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at 
+      `SELECT id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at 
        FROM todos 
        WHERE user_id = $1 
        ORDER BY updated_at DESC`,
@@ -25,7 +25,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at 
+      `SELECT id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at 
        FROM todos 
        WHERE id = $1 AND user_id = $2`,
       [req.params.id, req.userId]
@@ -42,13 +42,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // POST /api/todos - Create todo
 router.post('/', async (req: Request, res: Response) => {
-  const { id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at } = req.body;
+  const { id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO todos (id, user_id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at`,
-      [id, req.userId, title || '', completed || false, group_ids || [], tags || [], 
+      `INSERT INTO todos (id, user_id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at`,
+      [id, req.userId, title || '', completed || false, group_ids || [], tags || [], linked_note_ids || [],
        due_date || null, created_at || new Date(), updated_at || new Date(), deleted_at || null]
     );
     res.status(201).json(result.rows[0]);
@@ -60,7 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 // PUT /api/todos/:id - Update todo
 router.put('/:id', async (req: Request, res: Response) => {
-  const { title, completed, group_ids, tags, due_date, deleted_at } = req.body;
+  const { title, completed, group_ids, tags, linked_note_ids, due_date, deleted_at } = req.body;
   try {
     const result = await pool.query(
       `UPDATE todos 
@@ -68,12 +68,13 @@ router.put('/:id', async (req: Request, res: Response) => {
            completed = COALESCE($2, completed),
            group_ids = COALESCE($3, group_ids),
            tags = COALESCE($4, tags),
-           due_date = $5,
+           linked_note_ids = COALESCE($5, linked_note_ids),
+           due_date = $6,
            updated_at = CURRENT_TIMESTAMP,
-           deleted_at = $6
-       WHERE id = $7 AND user_id = $8
-       RETURNING id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at`,
-      [title, completed, group_ids, tags, due_date || null, deleted_at || null, req.params.id, req.userId]
+           deleted_at = $7
+       WHERE id = $8 AND user_id = $9
+       RETURNING id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at`,
+      [title, completed, group_ids, tags, linked_note_ids, due_date || null, deleted_at || null, req.params.id, req.userId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Todo not found' });
@@ -113,19 +114,20 @@ router.post('/batch', async (req: Request, res: Response) => {
     const results = [];
     for (const todo of todos) {
       const result = await pool.query(
-        `INSERT INTO todos (id, user_id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO todos (id, user_id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          ON CONFLICT (id) DO UPDATE SET
            title = EXCLUDED.title,
            completed = EXCLUDED.completed,
            group_ids = EXCLUDED.group_ids,
            tags = EXCLUDED.tags,
+           linked_note_ids = EXCLUDED.linked_note_ids,
            due_date = EXCLUDED.due_date,
            updated_at = EXCLUDED.updated_at,
            deleted_at = EXCLUDED.deleted_at
-         RETURNING id, title, completed, group_ids, tags, due_date, created_at, updated_at, deleted_at`,
+         RETURNING id, title, completed, group_ids, tags, linked_note_ids, due_date, created_at, updated_at, deleted_at`,
         [todo.id, req.userId, todo.title || '', todo.completed || false, todo.group_ids || [], 
-         todo.tags || [], todo.due_date || null, todo.created_at || new Date(), 
+         todo.tags || [], todo.linked_note_ids || [], todo.due_date || null, todo.created_at || new Date(), 
          todo.updated_at || new Date(), todo.deleted_at || null]
       );
       results.push(result.rows[0]);

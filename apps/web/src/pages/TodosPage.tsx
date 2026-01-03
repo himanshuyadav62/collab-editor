@@ -15,8 +15,8 @@ import { Plus, Trash2, RotateCcw, CheckCircle, X, Tag, FolderOpen, Pencil, Check
 import { TodoCard } from '@/components/TodoCard';
 import { NoteLinkDialog } from '@/components/NoteLinkDialog';
 import { LinkedNotesView } from '@/components/LinkedNotesView';
-import { Todo, TodoGroup } from '@/lib/types';
-import { useTodoGroups, useNotes, useTodos } from '@/hooks/useDataSync';
+import { Todo, TodoGroup, Note } from '@/lib/types';
+import { useTodoGroups, useTodos } from '@/hooks/useDataSync';
 import { useAuth } from '@/providers/AuthProvider';
 import { apiClient } from '@/lib/apiClient';
 import { toast } from 'sonner';
@@ -24,9 +24,10 @@ import { toast } from 'sonner';
 export function TodosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notes: notesData } = useNotes();
   const { todos: todosData, setTodos, refetch } = useTodos();
   const { groups, setGroups, refetch: refetchGroups } = useTodoGroups();
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [notesLoaded, setNotesLoaded] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
@@ -46,8 +47,35 @@ export function TodosPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isResizingLinkedNotes = useRef(false);
 
-  const notes = notesData || [];
   const todos = todosData || [];
+
+  // Load notes only when needed (for linking)
+  const loadNotes = useCallback(async () => {
+    if (notesLoaded) return;
+    if (user) {
+      try {
+        const data = await apiClient.getNotes(user.id);
+        setNotes((data || []).map((note: any) => ({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          createdAt: new Date(note.created_at).getTime(),
+          updatedAt: new Date(note.updated_at).getTime(),
+          deletedAt: note.deleted_at ? new Date(note.deleted_at).getTime() : undefined,
+        })));
+      } catch {
+        toast.error('Failed to load notes');
+      }
+    } else {
+      try {
+        const stored = localStorage.getItem('notes');
+        setNotes(stored ? JSON.parse(stored) : []);
+      } catch {
+        setNotes([]);
+      }
+    }
+    setNotesLoaded(true);
+  }, [user, notesLoaded]);
 
   useEffect(() => {
     refetch();
@@ -221,9 +249,10 @@ export function TodosPage() {
   }, [setTodos, user, todos]);
 
   const openLinkDialog = useCallback((todoId: string) => {
+    loadNotes(); // Load notes when opening link dialog
     setSelectedTodoId(todoId);
     setIsLinkDialogOpen(true);
-  }, []);
+  }, [loadNotes]);
 
   const handleSaveLinks = useCallback((noteIds: string[]) => {
     if (!selectedTodoId) return;
@@ -238,8 +267,9 @@ export function TodosPage() {
   }, [selectedTodoId, setTodos]);
 
   const handleViewNotes = useCallback((todoId: string) => {
+    loadNotes(); // Load notes when viewing linked notes
     setViewingNotesForTodo(todoId);
-  }, []);
+  }, [loadNotes]);
 
   const onNavigateToNote = useCallback((noteId: string) => {
     navigate(`/notes?noteId=${noteId}`);

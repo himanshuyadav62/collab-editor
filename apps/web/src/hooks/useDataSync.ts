@@ -118,7 +118,7 @@ export function useTodos() {
           createdAt: new Date(t.created_at).getTime(),
           updatedAt: new Date(t.updated_at).getTime(),
           deletedAt: t.deleted_at ? new Date(t.deleted_at).getTime() : undefined,
-          linkedNoteIds: [], groupIds: t.group_ids || [], tags: t.tags || [],
+          linkedNoteIds: t.linked_note_ids || [], groupIds: t.group_ids || [], tags: t.tags || [],
           dueDate: t.due_date ? new Date(t.due_date).getTime() : undefined,
         }))
       );
@@ -146,12 +146,17 @@ export function useTodos() {
       try {
         const changed = nextTodos.filter(t => {
           const prev = todos.find(p => p.id === t.id);
-          return !prev || prev.title !== t.title || prev.completed !== t.completed;
+          return !prev || prev.title !== t.title || prev.completed !== t.completed || 
+                 JSON.stringify(prev.linkedNoteIds) !== JSON.stringify(t.linkedNoteIds) ||
+                 JSON.stringify(prev.groupIds) !== JSON.stringify(t.groupIds) ||
+                 JSON.stringify(prev.tags) !== JSON.stringify(t.tags) ||
+                 prev.dueDate !== t.dueDate || prev.deletedAt !== t.deletedAt;
         });
         if (changed.length > 0) {
           await apiClient.batchUpsertTodos(user.id, changed.map(t => ({
             id: t.id, title: t.title, completed: t.completed,
             group_ids: t.groupIds || [], tags: t.tags || [],
+            linked_note_ids: t.linkedNoteIds || [],
             due_date: t.dueDate ? new Date(t.dueDate).toISOString() : null,
             created_at: new Date(t.createdAt).toISOString(),
             updated_at: new Date(t.updatedAt).toISOString(),
