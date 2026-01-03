@@ -8,10 +8,10 @@ function DocumentPage() {
 
   return (
     <div className="flex-1 flex flex-col w-full overflow-hidden">
-      <header className="bg-card/50 border-b border-border px-4 py-3 shrink-0">
+      <header className="bg-card border-b border-border px-4 py-3 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/doc" className="text-foreground hover:text-foreground/80 transition-colors font-medium">
               ← Back
             </Link>
             <span className="text-sm text-muted-foreground">
@@ -34,7 +34,7 @@ function DocumentPage() {
             </div>
             
             <span
-              className={`px-2 py-1 text-xs rounded ${
+              className={`px-2 py-1 text-xs rounded font-medium ${
                 isConnected
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                   : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'

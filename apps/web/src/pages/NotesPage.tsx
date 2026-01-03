@@ -227,7 +227,7 @@ export function NotesPage() {
                   </div>
                 </SheetContent>
               </Sheet>
-              <Button onClick={createNewNote} size="sm" className="bg-accent hover:bg-accent/90"><Plus className="w-4 h-4 mr-1" />New Note</Button>
+              <Button onClick={createNewNote} size="sm"><Plus className="w-4 h-4 mr-1" />New Note</Button>
             </div>
           </div>
         </div>
@@ -252,7 +252,7 @@ export function NotesPage() {
               <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
               <h2 className="text-xl font-semibold mb-2 text-foreground">No note selected</h2>
               <p className="text-muted-foreground mb-4">Select a note or create a new one</p>
-              <Button onClick={createNewNote} className="bg-accent hover:bg-accent/90"><Plus className="w-4 h-4 mr-1" />Create Note</Button>
+              <Button onClick={createNewNote}><Plus className="w-4 h-4 mr-1" />Create Note</Button>
             </div>
           </div>
         )}

@@ -587,7 +587,7 @@ export function TodosPage() {
                   onKeyDown={handleKeyDown}
                   className="flex-1 h-9"
                 />
-                <Button onClick={createTodo} className="bg-accent hover:bg-accent/90 h-9">
+                <Button onClick={createTodo} className="h-9">
                   <Plus className="w-4 h-4 mr-1" />
                   Add Todo
                 </Button>

@@ -10,7 +10,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ children, className }) => {
   return (
     <div
       className={clsx(
-        'flex items-center gap-1 p-2 border-b border-gray-200 bg-white',
+        'flex items-center gap-1 p-2 border-b bg-background text-foreground border-border',
         className
       )}
       role="toolbar"
@@ -29,7 +29,7 @@ export interface ToolbarGroupProps {
 export const ToolbarGroup: React.FC<ToolbarGroupProps> = ({ children, className }) => {
   return (
     <div
-      className={clsx('flex items-center gap-1 px-1 border-r border-gray-200 last:border-r-0', className)}
+      className={clsx('flex items-center gap-1 px-1 border-r border-border last:border-r-0', className)}
       role="group"
     >
       {children}
