@@ -64,10 +64,15 @@ export function useNotes() {
       localStorage.setItem('notes', JSON.stringify(nextNotes));
     } else if (user) {
       try {
-        const changed = nextNotes.filter(n => {
+        // Only sync new notes and deletedAt changes
+        // Title is synced via PATCH /api/notes/:id/title
+        // Content is synced via Yjs/collab server
+        const newNotes = nextNotes.filter(n => !notes.find(p => p.id === n.id));
+        const deletedAtChanged = nextNotes.filter(n => {
           const prev = notes.find(p => p.id === n.id);
-          return !prev || prev.title !== n.title || prev.content !== n.content;
+          return prev && prev.deletedAt !== n.deletedAt;
         });
+        const changed = [...newNotes, ...deletedAtChanged];
         if (changed.length > 0) {
           await apiClient.batchUpsertNotes(user.id, changed.map(n => ({
             id: n.id, title: n.title, content: n.content,

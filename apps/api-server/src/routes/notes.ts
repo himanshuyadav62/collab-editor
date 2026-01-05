@@ -81,6 +81,48 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /api/notes/:id/content - Update note content only (for real-time saving)
+router.patch('/:id/content', async (req: Request, res: Response) => {
+  const { content } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE notes 
+       SET content = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, updated_at`,
+      [content, req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating note content:', error);
+    res.status(500).json({ error: 'Failed to update note content' });
+  }
+});
+
+// PATCH /api/notes/:id/title - Update note title only
+router.patch('/:id/title', async (req: Request, res: Response) => {
+  const { title } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE notes 
+       SET title = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, updated_at`,
+      [title, req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating note title:', error);
+    res.status(500).json({ error: 'Failed to update note title' });
+  }
+});
+
 // DELETE /api/notes/:id - Delete note
 router.delete('/:id', async (req: Request, res: Response) => {
   try {

@@ -5,9 +5,9 @@ import { config } from './config/env.js';
 const server = Server.configure({
   port: config.port,
   
-  // Debounce document storage
-  debounce: 2000,
-  maxDebounce: 10000,
+  // Debounce document storage (500ms debounce, 2s max)
+  debounce: 500,
+  maxDebounce: 2000,
   
   async onLoadDocument(data) {
     console.log(`[LOAD] Loading document: ${data.documentName}`);

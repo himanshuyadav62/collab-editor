@@ -8,15 +8,18 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Search, Trash2, RotateCcw, FileText } from 'lucide-react';
 import { NoteCard } from '@/components/NoteCard';
-import { RichTextEditor } from '@/components/RichTextEditor';
+import { NoteEditor } from '@/components/NoteEditor';
 import { AttachmentManager } from '@/components/AttachmentManager';
 import { Note, Attachment } from '@/lib/types';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { useNotes } from '@/hooks/useDataSync';
+import { useAuth } from '@/providers/AuthProvider';
+import { apiClient } from '@/lib/apiClient';
 
 export function NotesPage() {
   const { notes: allNotes, setNotes: setAllNotes } = useNotes();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { noteId } = useParams<{ noteId?: string }>();
   
@@ -24,13 +27,11 @@ export function NotesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
   const [isRecycleBinOpen, setIsRecycleBinOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [attachmentHeight, setAttachmentHeight] = useState(240);
   const isResizing = useRef(false);
   const isResizingAttachment = useRef(false);
-  const contentDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const titleDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { if (noteId) setSelectedNoteId(noteId); }, [noteId]);
@@ -42,7 +43,6 @@ export function NotesPage() {
   const handleSelectNoteWithNavigation = useCallback((note: Note) => {
     setSelectedNoteId(note.id);
     setEditTitle(note.title);
-    setEditContent(note.content);
     navigate(`/notes/${note.id}`);
   }, [navigate]);
 
@@ -51,7 +51,6 @@ export function NotesPage() {
   useEffect(() => {
     if (selectedNote) {
       setEditTitle(selectedNote.title);
-      setEditContent(selectedNote.content);
     }
   }, [selectedNote]);
 
@@ -71,7 +70,6 @@ export function NotesPage() {
     setAllNotes(current => [newNote, ...(current || [])]);
     setSelectedNoteId(newNote.id);
     setEditTitle(newNote.title);
-    setEditContent('');
     navigate(`/notes/${newNote.id}`);
     toast.success('New note created');
   }, [setAllNotes, navigate]);
@@ -91,7 +89,7 @@ export function NotesPage() {
 
   const deleteNote = useCallback((id: string) => {
     updateNote(id, { deletedAt: Date.now() });
-    if (selectedNoteId === id) { setSelectedNoteId(null); setEditTitle(''); setEditContent(''); navigate('/notes'); }
+    if (selectedNoteId === id) { setSelectedNoteId(null); setEditTitle(''); navigate('/notes'); }
     toast.success('Note moved to recycle bin', { action: { label: 'Undo', onClick: () => restoreNote(id) } });
   }, [selectedNoteId, updateNote, navigate]);
 
@@ -111,18 +109,27 @@ export function NotesPage() {
     toast.success('Recycle bin emptied');
   }, [setAllNotes]);
 
-  const handleContentChange = useCallback((content: string) => {
-    setEditContent(content);
-    if (contentDebounceTimer.current) clearTimeout(contentDebounceTimer.current);
-    if (selectedNoteId) contentDebounceTimer.current = setTimeout(() => updateNote(selectedNoteId, { content }), 3000);
-  }, [selectedNoteId, updateNote]);
-
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
     setEditTitle(title);
+    // Update local state immediately
+    if (selectedNoteId) {
+      setAllNotes(current => (current || []).map(note => 
+        note.id === selectedNoteId ? { ...note, title, updatedAt: Date.now() } : note
+      ));
+    }
+    // Debounce API call (500ms)
     if (titleDebounceTimer.current) clearTimeout(titleDebounceTimer.current);
-    if (selectedNoteId) titleDebounceTimer.current = setTimeout(() => updateNote(selectedNoteId, { title }), 3000);
-  }, [selectedNoteId, updateNote]);
+    if (selectedNoteId && user) {
+      titleDebounceTimer.current = setTimeout(async () => {
+        try {
+          await apiClient.updateNoteTitle(user.id, selectedNoteId, title);
+        } catch (error) {
+          console.error('Failed to save note title:', error);
+        }
+      }, 500);
+    }
+  }, [selectedNoteId, setAllNotes, user]);
 
   const startResizing = useCallback(() => { isResizing.current = true; }, []);
   const stopResizing = useCallback(() => { isResizing.current = false; isResizingAttachment.current = false; }, []);
@@ -150,7 +157,6 @@ export function NotesPage() {
 
   useEffect(() => {
     return () => { 
-      if (contentDebounceTimer.current) clearTimeout(contentDebounceTimer.current); 
       if (titleDebounceTimer.current) clearTimeout(titleDebounceTimer.current); 
     };
   }, [selectedNoteId]);
@@ -239,7 +245,11 @@ export function NotesPage() {
               <Input value={editTitle} onChange={handleTitleChange} placeholder="Note title..." className="text-xl font-semibold border-0 bg-transparent px-2 focus-visible:ring-0 focus-visible:ring-offset-0" />
             </div>
             <div className="flex-1 h-0 flex flex-col border-x border-border">
-              <RichTextEditor content={editContent} onChange={handleContentChange} placeholder="Start writing your note..." />
+              <NoteEditor 
+                noteId={selectedNoteId}
+                initialContent={selectedNote?.content}
+                placeholder="Start writing your note..." 
+              />
             </div>
             <div className="shrink-0 flex flex-col" style={{ height: `${attachmentHeight}px` }}>
               <button type="button" className="h-1 bg-border hover:bg-accent cursor-row-resize transition-colors w-full" onMouseDown={startResizingAttachment} aria-label="Resize attachments panel" />

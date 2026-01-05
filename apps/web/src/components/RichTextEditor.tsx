@@ -22,12 +22,14 @@ import {
   Link as LinkIcon,
   Image as ImageIcon
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
+  onSave?: (content: string) => void;
   placeholder?: string;
+  autoSaveDelay?: number;
 }
 
 const handleImagePaste = (editor: any, items: DataTransferItemList | undefined) => {
@@ -77,7 +79,23 @@ const handleImageDrop = (view: any, editor: any, files: FileList | undefined, cl
 };
 
 
-export function RichTextEditor({ content, onChange, placeholder }: Readonly<RichTextEditorProps>) {
+export function RichTextEditor({ content, onChange, onSave, placeholder, autoSaveDelay = 500 }: Readonly<RichTextEditorProps>) {
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedContentRef = useRef<string>(content);
+
+  const debouncedSave = useCallback((newContent: string) => {
+    if (!onSave) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      if (newContent !== lastSavedContentRef.current) {
+        onSave(newContent);
+        lastSavedContentRef.current = newContent;
+      }
+    }, autoSaveDelay);
+  }, [onSave, autoSaveDelay]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -108,8 +126,20 @@ export function RichTextEditor({ content, onChange, placeholder }: Readonly<Rich
         return handleImageDrop(view, editor, event.dataTransfer?.files, event.clientX, event.clientY);
       }
     },
-    onUpdate: ({ editor }) => { onChange(editor.getHTML()); }
+    onUpdate: ({ editor }) => { 
+      const html = editor.getHTML();
+      onChange(html);
+      debouncedSave(html);
+    }
   });
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {

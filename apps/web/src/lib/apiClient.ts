@@ -37,6 +37,26 @@ class ApiClient {
     return res.json();
   }
 
+  async updateNoteContent(userId: string, id: string, content: string) {
+    const res = await fetch(`${API_URL}/api/notes/${id}/content`, {
+      method: 'PATCH',
+      headers: this.getAuthHeader(userId),
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) throw new Error('Failed to update note content');
+    return res.json();
+  }
+
+  async updateNoteTitle(userId: string, id: string, title: string) {
+    const res = await fetch(`${API_URL}/api/notes/${id}/title`, {
+      method: 'PATCH',
+      headers: this.getAuthHeader(userId),
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error('Failed to update note title');
+    return res.json();
+  }
+
   async deleteNote(userId: string, id: string) {
     const res = await fetch(`${API_URL}/api/notes/${id}`, {
       method: 'DELETE',
