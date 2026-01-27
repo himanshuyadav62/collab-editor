@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import { Trash2, Link, FileText, Tag, X, Plus, FolderOpen, Calendar, Clock, Pencil, Check } from 'lucide-react';
+import { Trash2, Link, FileText, Tag, X, Plus, FolderOpen, Calendar, Clock, Pencil, Check, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { Todo, TodoGroup } from '@/lib/types';
 
@@ -184,12 +184,13 @@ export function TodoCard({ todo, groups, onToggle, onDelete, onLinkNotes, onView
                   {linkedNoteIds.length} {linkedNoteIds.length === 1 ? 'note' : 'notes'}
                 </Badge>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={onViewNotes}
-                  className="h-4 px-1 text-[10px] text-accent hover:text-accent"
+                  className="h-6 px-2 text-[11px] font-medium"
                 >
-                  View
+                  <Eye className="w-3 h-3 mr-1" />
+                  View Notes
                 </Button>
               </>
             )}
